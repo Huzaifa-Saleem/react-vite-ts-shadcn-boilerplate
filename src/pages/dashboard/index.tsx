@@ -1,6 +1,6 @@
 import { Card, CardContent } from "@components/ui/card";
 
-export const Dashboard = () => {
+export default function Dashboard() {
   return (
     <div className="flex h-[100vh] w-full items-center justify-center">
       <Card>
@@ -17,4 +17,4 @@ export const Dashboard = () => {
       </Card>
     </div>
   );
-};
+}
