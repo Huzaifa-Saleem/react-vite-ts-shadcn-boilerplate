@@ -1,53 +1,83 @@
-import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Link } from "react-router-dom";
+import React from "react";
+// ----------------------------------------------
+import AuthLoginForm from "./AuthLoginForm";
+import AuthHeader from "../_components/AuthHeader";
+
+import { enqueueSnackbar } from "notistack";
+import { LoginData, LoginDataSchema } from "@/schemas/auth";
+import { supabaseClient } from "@/supabase/app";
+import { login, loginWithGoogle, refreshToken } from "@redux/slices/auth";
+import { dispatch } from "@redux/store";
+import { useNavigate } from "react-router";
 
 export default function Login() {
+  // ---STATE-----------------------------
+  const [isLoading, setIsLoading] = React.useState(false);
+  const [error, setError] = React.useState("");
+  const [data, setData] = React.useState<LoginData>({
+    email: "",
+    password: "",
+  });
+
+  // ---HOOKS-----------------------------
+  const navigate = useNavigate();
+
+  // ---USE EFFECT-----------------------------
+  React.useEffect(() => {
+    setIsLoading(false);
+    setError("");
+  }, []);
+
+  // ---HANDLERS-----------------------------
+  const handleOnSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    setIsLoading(true);
+    setError("");
+
+    try {
+      // ---VALIDATE DATA-----------------------------
+      LoginDataSchema.parse(data);
+
+      // ---LOGIN USER-----------------------------
+      await login(data, navigate);
+    } catch (error) {
+      // ---HANDLE ZOD ERROR-----------------------------
+      if (error?.errors?.[0]?.message) {
+        setError(error.errors[0].message);
+        enqueueSnackbar(error.errors[0].message, { variant: "error" });
+      }
+
+      // ---HANDLE SUPABASE ERROR-----------------------------
+      else {
+        setError(error.message);
+        enqueueSnackbar(error.message, { variant: "error" });
+      }
+    }
+  };
+
+  // ---GOOGLE SIGN IN-----------------------------
+  const handleGoogleSignIn = async () => {
+    try {
+      setIsLoading(true);
+      // ---SIGN IN WITH GOOGLE-----------------------------
+      await loginWithGoogle();
+    } catch (error) {
+      console.error("error", error);
+      enqueueSnackbar(error.message, { variant: "error" });
+    }
+  };
+
   return (
-    <Card className="mx-auto max-w-sm">
-      <CardHeader>
-        <CardTitle className="text-xl">Sign Up</CardTitle>
-        <CardDescription>
-          Enter your information to create an account
-        </CardDescription>
-      </CardHeader>
-      <CardContent>
-        <div className="grid gap-4">
-          <div className="grid gap-2">
-            <Label htmlFor="email">Email</Label>
-            <Input
-              id="email"
-              type="email"
-              placeholder="m@example.com"
-              required
-            />
-          </div>
-          <div className="grid gap-2">
-            <Label htmlFor="password">Password</Label>
-            <Input id="password" type="password" />
-          </div>
-          <Button type="submit" className="w-full">
-            Create an account
-          </Button>
-          <Button variant="outline" className="w-full">
-            Sign up with GitHub
-          </Button>
-        </div>
-        <div className="mt-4 text-center text-sm">
-          Already have an account?{" "}
-          <Link to="/register" className="underline">
-            Sign up
-          </Link>
-        </div>
-      </CardContent>
-    </Card>
+    <main className="h-[100vh] flex flex-col items-center justify-center">
+      <AuthHeader />
+      <AuthLoginForm
+        handleOnSubmit={handleOnSubmit}
+        isLoading={isLoading}
+        data={data}
+        error={error}
+        setData={setData}
+        handleGoogleSignIn={handleGoogleSignIn}
+      />
+    </main>
   );
 }

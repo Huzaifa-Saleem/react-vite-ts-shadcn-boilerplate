@@ -1,63 +1,85 @@
-import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Link } from "react-router-dom";
+import React from "react";
+import { RegisterData } from "@typedefs/auth";
+//
+import AuthHeader from "../_components/AuthHeader";
+import AuthRegisterForm from "./AuthRegisterForm";
+import { RegisterDataSchema } from "@/schemas/auth";
+import { supabaseClient } from "@/supabase/app";
+import { enqueueSnackbar } from "notistack";
+import { register } from "@redux/slices/auth";
+import { useNavigate } from "react-router";
 
 export default function Register() {
+  // ---STATE-----------------------------
+  const [isLoading, setIsLoading] = React.useState(false);
+  const [error, setError] = React.useState("");
+  const [data, setData] = React.useState<RegisterData>({
+    firstName: "",
+    lastName: "",
+    email: "",
+    password: "",
+  });
+
+  // ---HOOKS-----------------------------
+  const navigate = useNavigate();
+
+  // ---HANDLERS-----------------------------
+  const handleOnSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    setIsLoading(true);
+    setError("");
+
+    try {
+      // ---VALIDATE DATA-----------------------------
+      RegisterDataSchema.parse(data);
+
+      // ---REGISTER USER-----------------------------
+      register(data, navigate);
+    } catch (error) {
+      // ----------------------------------------------
+      if (error?.errors?.[0]?.message) {
+        setError(error.errors[0].message);
+        enqueueSnackbar(error.errors[0].message, { variant: "error" });
+      }
+    }
+
+    setIsLoading(false);
+  };
+
+  // ---GOOGLE SIGN IN-----------------------------
+  const handleGoogleSignIn = async () => {
+    try {
+      // ---SIGN IN WITH GOOGLE-----------------------------
+      const { error, data: returnData } =
+        await supabaseClient.auth.signInWithOAuth({
+          provider: "google",
+        });
+
+      // ---HANDLE ERROR-----------------------------
+      if (error) {
+        throw error;
+      }
+
+      console.log("returnData", returnData);
+
+      enqueueSnackbar("Logged in successfully", { variant: "success" });
+    } catch (error) {
+      console.error("error", error);
+      enqueueSnackbar(error.message, { variant: "error" });
+    }
+  };
+
   return (
-    <Card className="mx-auto max-w-sm">
-      <CardHeader>
-        <CardTitle className="text-xl">Sign Up</CardTitle>
-        <CardDescription>
-          Enter your information to create an account
-        </CardDescription>
-      </CardHeader>
-      <CardContent>
-        <div className="grid gap-4">
-          <div className="grid grid-cols-2 gap-4">
-            <div className="grid gap-2">
-              <Label htmlFor="first-name">First name</Label>
-              <Input id="first-name" placeholder="Max" required />
-            </div>
-            <div className="grid gap-2">
-              <Label htmlFor="last-name">Last name</Label>
-              <Input id="last-name" placeholder="Robinson" required />
-            </div>
-          </div>
-          <div className="grid gap-2">
-            <Label htmlFor="email">Email</Label>
-            <Input
-              id="email"
-              type="email"
-              placeholder="m@example.com"
-              required
-            />
-          </div>
-          <div className="grid gap-2">
-            <Label htmlFor="password">Password</Label>
-            <Input id="password" type="password" />
-          </div>
-          <Button type="submit" className="w-full">
-            Create an account
-          </Button>
-          <Button variant="outline" className="w-full">
-            Sign up with GitHub
-          </Button>
-        </div>
-        <div className="mt-4 text-center text-sm">
-          Already have an account?{" "}
-          <Link to="/login" className="underline">
-            Sign in
-          </Link>
-        </div>
-      </CardContent>
-    </Card>
+    <main className="h-[100vh] flex flex-col items-center justify-center">
+      <AuthHeader />
+      <AuthRegisterForm
+        handleOnSubmit={handleOnSubmit}
+        isLoading={isLoading}
+        data={data}
+        error={error}
+        setData={setData}
+        handleGoogleSignIn={handleGoogleSignIn}
+      />
+    </main>
   );
 }

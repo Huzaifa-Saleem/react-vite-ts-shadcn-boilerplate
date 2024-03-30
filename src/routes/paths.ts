@@ -6,6 +6,7 @@ const PATHS = {
 
   // auth
   login: "/login",
+  validate: "/auth/validate",
   logout: "/logout",
   register: "/register",
   verify: "/verify",
